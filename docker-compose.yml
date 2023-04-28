@@ -1,0 +1,43 @@
+version: '3'
+services:
+  nats-streaming-1:
+    image: nats-streaming:latest
+    environment:
+      - CLUSTER_ID=test-cluster
+      - NATS_STREAMING_PORT=4222
+      - NATS_STREAMING_KV_STORE=file
+      - NATS_STREAMING_STORE=file
+      - NATS_STREAMING_STORE_DIR=./data/nats-streaming-1
+      - NATS_STREAMING_KV_STORE_DIR=./data/nats-streaming-1
+    ports:
+      - 4222:4222
+    volumes:
+      - ./data/nats-streaming-1:/data
+
+  nats-streaming-2:
+    image: nats-streaming:latest
+    environment:
+      - CLUSTER_ID=test-cluster
+      - NATS_STREAMING_PORT=4223
+      - NATS_STREAMING_KV_STORE=file
+      - NATS_STREAMING_STORE=file
+      - NATS_STREAMING_STORE_DIR=./data/nats-streaming-2
+      - NATS_STREAMING_KV_STORE_DIR=./data/nats-streaming-2
+    ports:
+      - 4223:4222
+    volumes:
+      - ./data/nats-streaming-2:/data
+
+  nats-streaming-3:
+    image: nats-streaming:latest
+    environment:
+      - CLUSTER_ID=test-cluster
+      - NATS_STREAMING_PORT=4224
+      - NATS_STREAMING_KV_STORE=file
+      - NATS_STREAMING_STORE=file
+      - NATS_STREAMING_STORE_DIR=./data/nats-streaming-3
+      - NATS_STREAMING_KV_STORE_DIR=./data/nats-streaming-3
+    ports:
+      - 4224:4222
+    volumes:
+      - ./data/nats-streaming-3:/data
