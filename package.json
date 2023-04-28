@@ -1,0 +1,11 @@
+{
+  "name": "workers-gone-nats-js",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:anyscripts/workers-gone-nats-js.git",
+  "author": "skitsanos <info@skitsanos.com>",
+  "license": "MIT",
+  "dependencies": {
+    "nats": "^2.13.1"
+  }
+}
