@@ -23,7 +23,7 @@ sinks:
     encoding:
       codec: json
     url: "nats://localhost:4222"
-    subject: "task.uuid"
+    subject: "task.hello"
 
   log:
     type: console

@@ -5,7 +5,13 @@
   "repository": "git@github.com:anyscripts/workers-gone-nats-js.git",
   "author": "skitsanos <info@skitsanos.com>",
   "license": "MIT",
+  "scripts": {
+    "run:docker": "docker-compose up -d",
+    "run:vector": "vector -c vector/config.yaml",
+    "start": "node --watch src/worker.js"
+  },
   "dependencies": {
-    "nats": "^2.13.1"
+    "nats": "^2.13.1",
+    "pino": "^8.11.0"
   }
 }

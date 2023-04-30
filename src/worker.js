@@ -1,97 +1,91 @@
-const {connect, StringCodec} = require('nats');
+const {hostname} = require('os');
+const logger = require('pino')({
+    name: `Worker [${hostname()}]`
+});
+const {
+    connect,
+    StringCodec
+} = require('nats');
+const {
+    join,
+    resolve
+} = require('path');
+const {existsSync} = require('fs');
 const codec = StringCodec();
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+const defaultResponse = {
+    pid: process.pid,
+    hostname: hostname()
+};
+
 (async () =>
 {
-    // Connect to NATS
     const nc = await connect({
         servers: ['nats://localhost:4222'],
-        name: 'Worker'
+        name: `Worker-[${hostname()}]`
     });
 
-    console.log(nc.getServer());
+    logger.info(nc.getServer());
 
-    // Flag to indicate whether the worker is busy or available
     let workerBusy = false;
 
-    console.log('Worker Instance connected to NATS');
+    logger.info('Worker Instance connected to NATS');
 
     // Subscribe to "task.*" subject
-    nc.subscribe('task.*', {
+    nc.subscribe('task.>', {
         queue: 'task',
         callback: async (err, msg) =>
         {
             if (err)
             {
-                console.log(err);
+                logger.error(err);
                 return;
             }
 
             if (workerBusy)
             {
-                console.log('Worker is busy, cannot process new task');
+                logger.info('Worker is busy, cannot process new task');
                 return;
             }
 
-            console.log(process.pid, 'Received task on subject: ', msg.subject);
+            logger.info(process.pid, 'Received task on subject: ', msg.subject);
             workerBusy = true;
 
-            // Publish message to "worker.busy" subject to indicate that the instance is now busy
-            nc.publish('worker.busy', codec.encode(JSON.stringify({id: 'worker-1'})));
+            if (msg.subject.startsWith('task.'))
+            {
+                const [, ...arrPath] = msg.subject.split('.');
+                const pathToHandler = resolve(join(__dirname, 'tasks', ...arrPath));
+                //
+                // Check if the handler exists
+                //
+                if (existsSync(`${pathToHandler}.js`))
+                {
+                    // Publish message to "worker.busy" subject to indicate that the instance is now busy
+                    nc.publish('worker.busy', codec.encode(JSON.stringify({...defaultResponse})));
 
-            // Process the task
-            console.log('Processing task with payload: ', msg.data.toString());
-            // ...
-            await delay(1000);
+                    // Process the task
+                    logger.info('Processing task with payload');
+                    // ...
+                    await delay(10000);
+
+                    const handler = require(`${pathToHandler}`);
+                    try
+                    {
+                        await handler(nc, msg);
+                    }
+                    catch (e)
+                    {
+                        logger.error(e);
+                    }
+                }
+            }
 
             workerBusy = false;
 
             // Publish a message to "worker.available" subject to indicate that the instance is now available
-            nc.publish('worker.available', codec.encode(JSON.stringify({id: 'worker-1'})));
-        }
-    });
-
-    //Subscribe to "worker.available" subject
-    nc.subscribe('worker.available', {
-        queue: 'worker',
-        callback: (err, _msg) =>
-        {
-            if (err)
-            {
-                console.log(err);
-                return;
-            }
-
-            if (!workerBusy)
-            {
-                console.log('Worker is available, checking for tasks');
-                // Retrieve a task from the task queue
-                nc.request('task.queue', function(msg)
-                {
-                    if (!msg)
-                    {
-                        console.log('No tasks available in the queue');
-                        return;
-                    }
-
-                    console.log('Retrieved task from the queue');
-                    workerBusy = true;
-
-                    // Publish message to "worker.busy" subject to indicate that the instance is now busy
-                    nc.publish('worker.busy', JSON.stringify({id: 'worker-1'}));
-
-                    // Process the task
-                    console.log('Processing task with payload: ', msg.toString());
-                    // ...
-
-                    workerBusy = false;
-
-                    // Publish message to "worker.available" subject to indicate that the instance is now available
-                    nc.publish('worker.available', codec.encode(JSON.stringify({id: 'worker-1'})));
-                });
-            }
+            nc.publish('worker.available', codec.encode(JSON.stringify({...defaultResponse})));
         }
     });
 })();
